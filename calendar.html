@@ -96,16 +96,20 @@
                             </v-toolbar>
                             <v-card-text>
                                 <v-row>
-                                    {{ message }}
+                                    <v-col v-show="message == 1">出産日が予定日より1 週間以上遅れた場合は、1週間を超える期間については無給となります。</v-col>
+                                    <v-col v-show="message == 2">妊娠４カ月未満で早産、流産や人工妊娠中絶を行ったときは、<span style='background-color:#FA8072;'>その当日</span>を産前休暇として取ることができます。また、その日から<span style='background-color:#00BFFF;'>６週間以内で医師が必要と認めた期間</span>を産後休暇として取ることができます。</v-col>
+                                    <v-col v-show="message == 3">
+                                        予定日の６週間前になるまでに出産したときは<span style='background-color:#FA8072;'>出産当日と出産日前で医師が休養を必要と認めた期間（最大６週間）</span>を産前休暇として取ることができます。
+                                    </v-col>
                                 </v-row>
                                 <v-row v-show="debug">
                                     <v-col>expectedDate: {{ expectedDate }}</v-col>
                                     <v-col>birthDate: {{ birthDate }}</v-col>
-                                    <v-col>preStartDate:{{ preStartDate.format("yyyy-MM-DD") }}</v-col>
-                                    <v-col>preEndDate:{{ preEndDate.format("yyyy-MM-DD") }}</v-col>
-                                    <v-col>postStartDate:{{ postStartDate.format("yyyy-MM-DD") }}</v-col>
-                                    <v-col>postEndDate:{{ postEndDate .format("yyyy-MM-DD") }}</v-col>
-                                    <v-col>benefitDays:{{ benefitDays }}</v-col>
+                                    <v-col>preStartDate: {{ preStartDate.format("yyyy-MM-DD") }}</v-col>
+                                    <v-col>preEndDate: {{ preEndDate.format("yyyy-MM-DD") }}</v-col>
+                                    <v-col>postStartDate: {{ postStartDate.format("yyyy-MM-DD") }}</v-col>
+                                    <v-col>postEndDate: {{ postEndDate .format("yyyy-MM-DD") }}</v-col>
+                                    <v-col>benefitDays: {{ benefitDays }}</v-col>
                                 </v-row>
                                 <v-row>
                                     <v-col v-for="m in months" :key="m.key" cols="12" sm="6" md="4" lg="3" xl="2">
@@ -159,7 +163,7 @@
                 benefitDays: 0,
                 leaveStart: null,
                 leaveEnd: null,
-                message: null,
+                message: 0,
             }),
             methods: {
                 setDates(date) {
@@ -218,24 +222,21 @@
                     const e = moment(this.expectedDate);
                     const b = moment(this.birthDate);
                     const diff = e.diff(b, 'days');
-                    if (diff < -7) {
-                        this.message = "出産日が予定日より1 週間以上遅れた場合は、1週間を超える期間については無給となります。"
-                    } else if (diff > 7 * 4 * 7) { //4ヶ月未満
+                    if (diff < -7) { // 一週間以上後
+                        this.message = 1;
+                    } else if (diff > 7 * 4 * 7) { //在胎4ヶ月未満
                         //産後休暇は6週間で医師が必要と認めた期間
                         //afterHolsEndDate = DateAdd('d', 7 * (afterHolsWeeks - 2) - 1, afterHolsStartDate, "yyyy/mm/dd");
                         this.preStartDate = moment(this.birthDate);
-                        this.message = "妊娠４カ月未満で早産、流産や人工妊娠中絶を行ったときは、<span style='background-color:#FA8072;'>その当日<\/span>を産前休暇として取ることができます。";
-                        this.message += "また、その日から<span style='background-color:#00BFFF;'>６週間以内で医師が必要と認めた期間<\/span>を産後休暇として取ることができます。"
-                    } else if (diff >= 7 * 6) { //４カ月以後、6週間より前
+                        this.message = 2;
+                    } else if (diff >= 7 * 6) { //在胎４カ月以後、6週間より前
                         //beforeHolsWeeks = 6; //多胎の場合でも単胎と同じになる
                         //beforeHolsStartDate = DateAdd('d', -7 * beforeHolsWeeks + 1, getDeliveryDate("/"), "yyyy/mm/dd");
                         //beforeHolsEndDate = getDeliveryDate("/");
                         this.preStartDate = moment(this.birthDate);
-                        this.message = "妊娠４カ月から予定日の６週間前になるまでに出産したときは";
-                        this.message += "<span style='background-color:#FA8072;'>出産当日と出産日前で医師が休養を必要と認めた期間（最大６週間）<\/span>";
-                        this.message += "を産前休暇として取ることができます。"
+                        this.message = 3;
                     } else {
-                        this.message = null;
+                        this.message = 0;
                     }
                     this.extended = moment(this.birthDate).diff(moment(this.expectedDate), 'days');
                     if (this.extended < 0) {
