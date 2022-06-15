@@ -33,7 +33,7 @@
                                   required
                                 ></v-text-field>
                               </template>
-                                            <v-date-picker v-model="expectedDate" no-title scrollable locale="ja-jp" :day-format="dayFormat">
+                                            <v-date-picker :show-current="false" v-model="expectedDate" no-title scrollable locale="ja-jp" :day-format="dayFormat">
                                                 <v-spacer></v-spacer>
                                                 <v-btn text color="primary" @click="menu = false">
                                                     キャンセル
@@ -45,10 +45,7 @@
                                         </v-menu>
                                     </v-col>
                                     <v-col cols="6" sm="6" md="3" lg="3" class="pb-0 pt-0 pt-sm-4 pt-md-1 pt-lg-4">
-                                        <v-radio-group v-model="pregnancy" row @change="getCalendar()">
-                                            <v-radio label="単胎妊娠" value="single"></v-radio>
-                                            <v-radio label="多胎妊娠" value="multiple"></v-radio>
-                                        </v-radio-group>
+                                        <v-switch v-model="pregnancy" label="多胎妊娠（双子、三つ子以上の場合）" @change="getCalendar()"></v-switch>
                                     </v-col>
                                     <v-col cols="6" sm="6" md="3" lg="3" class="pt-0 pb-0 pt-md-4">
                                         <v-menu ref="menu2" v-model="menu2" :close-on-content-click="false" :return-value.sync="birthDate" transition="scale-transition" offset-y min-width="auto">
@@ -61,10 +58,10 @@
                                   v-bind="attrs"
                                   v-on="on"
                                   :rules="[isValidBirthDate, isValidBirthDate2]"
-                                  :disabled="onSchedule"
+                                  :disabled="false"
                                 ></v-text-field>
                               </template>
-                                            <v-date-picker v-model="birthDate" no-title scrollable locale="ja-jp" :day-format="dayFormat">
+                                            <v-date-picker :show-current="false" v-model="birthDate" no-title scrollable locale="ja-jp" :day-format="dayFormat">
                                                 <v-spacer></v-spacer>
                                                 <v-btn text color="primary" @click="menu2 = false">
                                                     キャンセル
@@ -83,19 +80,22 @@
                         </v-card-text>
                     </v-card>
                     <v-expand-transition>
-                        <v-card v-if="expectedDate && valid" class="mt-4">
+                        <v-card v-if="months.length > 0 && valid" class="mt-4">
                             <v-system-bar color="light-blue darken-4" dark>
                                 <v-spacer></v-spacer>
                                 <v-icon @click="onEscKeyDown">mdi-close</v-icon>
                             </v-system-bar>
-                            <v-toolbar color="light-blue darken-2" dark>
-                                <v-toolbar-title>出産手当金支給期間</v-toolbar-title>
-                                <v-chip color="white ml-2" light>{{ preStartDate.format('yyyy年M月D日') }}～{{ postEndDate.format('yyyy年M月D日') }}（{{ benefitDays }}日間）</v-chip>
-                                <v-spacer></v-spacer>
-                                <v-chip color="primary" class="mr-2">産前</v-chip>
-                                <v-chip color="success">産後</v-chip>
-                            </v-toolbar>
                             <v-card-text>
+                                <v-row>
+                                    <v-col>
+                                        出産手当金支給期間:
+                                        <v-chip color="white ml-2" light>{{ preStartDate.format('yyyy年M月D日') }}～{{ postEndDate.format('yyyy年M月D日') }}（{{ benefitDays }}日間）</v-chip>
+                                    </v-col>
+                                    <v-col align="right">
+                                        <v-chip color="primary" class="mr-2">産前</v-chip>
+                                        <v-chip color="success">産後</v-chip>
+                                    </v-col>
+                                </v-row>
                                 <v-row>
                                     <v-col v-show="message == 1">出産日が予定日より1 週間以上遅れた場合は、1週間を超える期間については無給となります。</v-col>
                                     <v-col v-show="message == 2">妊娠４カ月未満で早産、流産や人工妊娠中絶を行ったときは、<span style='background-color:#FA8072;'>その当日</span>を産前休暇として取ることができます。また、その日から<span style='background-color:#00BFFF;'>６週間以内で医師が必要と認めた期間</span>を産後休暇として取ることができます。</v-col>
@@ -142,13 +142,14 @@
     <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.3/moment.min.js" type="text/javascript"></script>
     <script>
+        Vue.config.devtools = true;
         new Vue({
             el: '#app',
             vuetify: new Vuetify(),
             data: () => ({
-                valid: true,
+                valid: false,
                 debug: false,
-                pregnancy: 'single',
+                pregnancy: false,
                 expectedDate: null,
                 birthDate: null,
                 onSchedule: true,
@@ -186,6 +187,11 @@
                 },
                 saveBirthDate(date) {
                     this.$refs.menu2.save(date);
+                    if (this.expectedDate == this.birthDate) {
+                        this.onSchedule = true;
+                    } else {
+                        this.onSchedule = false;
+                    }
                     this.$refs.form.validate();
                     this.getCalendar();
                 },
@@ -210,7 +216,7 @@
                     }
 
                     // calc pre post dates
-                    const weeks = this.pregnancy === 'single' ? 6 : 14;
+                    const weeks = this.pregnancy ? 14 : 6;
                     const days = (weeks * 7 - 1);
                     this.preStartDate = moment(this.expectedDate).subtract(days, 'days');
                     this.preEndDate = moment(this.birthDate);
@@ -259,11 +265,11 @@
                     const dateEnd = moment(this.postEndDate);
                     dateStart.set('date', 1);
                     dateEnd.set('date', 1);
-                    for (let i = 0; i < 8; i++) {
+                    while (dateStart.diff(dateEnd, "months") < 1) {
                         months.push({
                             key: dateStart.format('M'),
                             value: dateStart.format('yyyy-MM-DD'),
-                            label: dateStart.format('yyyy年M月')
+                            label: dateStart.format('M月')
                         });
                         dateStart.add(1, 'month')
                     }
@@ -271,6 +277,20 @@
                 },
                 getEvents() {
                     const events = [];
+                    events.push({
+                        name: '開始',
+                        start: this.preStartDate.format('yyyy-MM-DD'),
+                        end: null,
+                        timed: false,
+                        color: '#f00'
+                    });
+                    events.push({
+                        name: '満了',
+                        start: this.postEndDate.format('yyyy-MM-DD'),
+                        end: null,
+                        timed: false,
+                        color: '#f00'
+                    });
                     events.push({
                         name: '予定',
                         start: this.expectedDate,
@@ -292,7 +312,7 @@
                     events.push({
                         name: '育休',
                         start: s,
-                        end: e,
+                        end: s,
                         timed: false,
                         color: '#000'
                     })
@@ -315,10 +335,13 @@
                     }
                 },
                 onEscKeyDown() {
-                    this.expectedDate = null;
-                    this.birthDate = null;
-                    this.pregnancy = 'single';
-                    this.onSchedule = true;
+                    this.$refs.form.reset();
+                    this.$nextTick(() => {
+                        this.expectedDate = null;
+                        this.birthDate = null;
+                        this.pregnancy = false;
+                        this.onSchedule = true;
+                    })
                 },
             }
         })
@@ -346,6 +369,10 @@
         .v-outside .v-event,
         .v-outside .v-btn {
             display: none;
+        }
+        
+        .v-calendar .v-event {
+            margin-top: -6px;
         }
     </style>
 </body>
