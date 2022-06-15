@@ -90,6 +90,8 @@
                                     <v-col>
                                         出産手当金支給期間:
                                         <v-chip color="white ml-2" light>{{ preStartDate.format('yyyy年M月D日') }}～{{ postEndDate.format('yyyy年M月D日') }}（{{ benefitDays }}日間）</v-chip>
+                                        <v-btn target="gcal" :href="gcalUrl">
+                                            <v-icon left>mdi-calendar</v-icon>Googleカレンダーに登録</v-btn>
                                     </v-col>
                                     <v-col align="right">
                                         <v-chip color="primary" class="mr-2">産前</v-chip>
@@ -166,6 +168,7 @@
                 leaveStart: null,
                 leaveEnd: null,
                 message: 0,
+                gcalUrl: ""
             }),
             methods: {
                 setDates(date) {
@@ -256,6 +259,7 @@
                     this.leaveEnd.add(1, 'years');
                     this.months = this.getMonths();
                     this.events = this.getEvents();
+                    this.gcalUrl = "https://calendar.google.com/calendar/u/0/r/eventedit?text=%E5%87%BA%E7%94%A3%E6%89%8B%E5%BD%93%E9%87%91%E6%94%AF%E7%B5%A6%E6%9C%9F%E9%96%93&dates=" + this.preStartDate.format('yyyyMMDD') + "/" + this.leaveStart.format('yyyyMMDD');
                 },
                 getMonths() {
                     const months = [];
