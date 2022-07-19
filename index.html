@@ -15,11 +15,21 @@
         <v-app>
             <v-main>
                 <v-container>
-                    <v-card>
+                    <v-card class="mx-auto" max-width="750" cols="12" sm="6" md="4" lg="3">
+                        <v-card-subtitle class="pb-2">出産手当金</v-card-subtitle>
+                        <v-card-text class="text-h5 font-weight-bold">産前・産後期間計算ツール</v-card-text>
+                        <v-card-subtitle>単体、多胎妊娠の別、出産予定日、出生日を入力してください。産前・産後期間を表示します。</strong>
+                        </v-card-subtitle>
                         <v-card-text>
                             <v-form ref="form" v-model="valid" lazy-validation>
                                 <v-row>
-                                    <v-col cols="6" sm="6" md="3" lg="3" class="pb-0">
+                                    <v-col cols="12" sm="12" md="12" lg="12" class="pb-0 pt-0 pt-sm-4 pt-md-1 pt-lg-4">
+                                        <v-radio-group v-model="pregnancy" @change="getCalendar()" row>
+                                            <v-radio label="単体妊娠" :value="false"></v-radio>
+                                            <v-radio label="多胎妊娠（双子、三つ子以上）" :value="true"></v-radio>
+                                        </v-radio-group>
+                                    </v-col>
+                                    <v-col cols="12" sm="12" md="12" lg="12" class="py-0">
                                         <v-menu ref="menu" v-model="menu" :close-on-content-click="false" :return-value.sync="expectedDate" transition="scale-transition" offset-y min-width="auto">
                                             <template v-slot:activator="{ on, attrs }">
                                 <v-text-field
@@ -44,10 +54,7 @@
                                             </v-date-picker>
                                         </v-menu>
                                     </v-col>
-                                    <v-col cols="6" sm="6" md="3" lg="3" class="pb-0 pt-0 pt-sm-4 pt-md-1 pt-lg-4">
-                                        <v-switch v-model="pregnancy" label="多胎妊娠（双子、三つ子以上の場合）" @change="getCalendar()"></v-switch>
-                                    </v-col>
-                                    <v-col cols="6" sm="6" md="3" lg="3" class="pt-0 pb-0 pt-md-4">
+                                    <v-col cols="12" sm="12" md="12" lg="12" class="py-0">
                                         <v-menu ref="menu2" v-model="menu2" :close-on-content-click="false" :return-value.sync="birthDate" transition="scale-transition" offset-y min-width="auto">
                                             <template v-slot:activator="{ on, attrs }">
                                 <v-text-field
@@ -72,24 +79,82 @@
                                             </v-date-picker>
                                         </v-menu>
                                     </v-col>
-                                    <v-col cols="6" sm="6" md="3" lg="3" class="pt-0 pt-md-4">
+                                    <v-col cols="12" sm="12" md="12" lg="12" class="pt-0 pt-md-4">
                                         <v-checkbox v-model="onSchedule" label="予定日と同じ" @click="syncDate"></v-checkbox>
                                     </v-col>
                                 </v-row>
                             </v-form>
                         </v-card-text>
                     </v-card>
+
+                    <v-card v-if="months.length > 0 && valid" class="mt-4 mx-auto" max-width="750" cols="12" sm="6" md="4" lg="3">
+                        <v-system-bar color="indigo" dark>
+                            <v-icon class="ml-4">mdi-calendar</v-icon>
+                            計算結果
+                            <v-spacer></v-spacer>
+                            <v-icon @click="onEscKeyDown">mdi-close</v-icon>
+                        </v-system-bar>
+                        <v-card-text>
+                            <v-row>
+                                <v-col v-show="message == 1">出産日が予定日より1 週間以上遅れた場合は、1週間を超える期間については無給となります。</v-col>
+                                <v-col v-show="message == 2">妊娠４カ月未満で早産、流産や人工妊娠中絶を行ったときは、<span style='background-color:#FA8072;'>その当日</span>を産前休暇として取ることができます。また、その日から<span style='background-color:#00BFFF;'>６週間以内で医師が必要と認めた期間</span>を産後休暇として取ることができます。</v-col>
+                                <v-col v-show="message == 3">
+                                    予定日の６週間前になるまでに出産したときは<span style='background-color:#FA8072;'>出産当日と出産日前で医師が休養を必要と認めた期間（最大６週間）</span>を産前休暇として取ることができます。
+                                </v-col>
+                            </v-row>
+                            <v-row v-show="debug">
+                                <v-col>expectedDate: {{ expectedDate }}</v-col>
+                                <v-col>birthDate: {{ birthDate }}</v-col>
+                                <v-col>preStartDate: {{ preStartDate.format("yyyy-MM-DD") }}</v-col>
+                                <v-col>preEndDate: {{ preEndDate.format("yyyy-MM-DD") }}</v-col>
+                                <v-col>postStartDate: {{ postStartDate.format("yyyy-MM-DD") }}</v-col>
+                                <v-col>postEndDate: {{ postEndDate .format("yyyy-MM-DD") }}</v-col>
+                                <v-col>benefitDays: {{ benefitDays }}</v-col>
+                            </v-row>
+                            <v-row class="justify-space-between">
+                                <v-col class="col-auto font-weight-bold">
+                                    <v-chip class="indigo" dark>支給開始日</v-chip>
+                                </v-col>
+                                <v-col class="col-auto font-weight-bold align-end text-h5">{{ preStartDate.format('yyyy年M月D日') }}
+                                </v-col>
+                            </v-row>
+                            <v-row>
+                                <v-divider></v-divider>
+                            </v-row>
+                            <v-row class="justify-space-between">
+                                <v-col class="col-auto font-weight-bold">
+                                    <v-chip class="indigo" dark>支給満了日</v-chip>
+                                </v-col>
+                                <v-col class="col-auto font-weight-bold align-end text-h5">{{ postEndDate.format('yyyy年M月D日') }}
+                                </v-col>
+                            </v-row>
+                            <v-row>
+                                <v-divider></v-divider>
+                            </v-row>
+                            <v-row class="justify-space-between">
+                                <v-col class="col-auto font-weight-bold">
+                                    <v-chip class="indigo" dark>支給期間</v-chip>
+                                </v-col>
+                                <v-col class="col-auto font-weight-bold align-end text-h5">{{ benefitDays }} 日間<span v-if="extendedDays> 0">（延長期間：{{ extendedDays }}日）</span>
+                                </v-col>
+                            </v-row>
+                            <v-row>
+                                <v-divider></v-divider>
+                            </v-row>
+                            <v-row class="justify-space-between">
+                                <v-col class="col-auto font-weight-bold">
+                                    <v-chip class="indigo" dark>育児休業開始日</v-chip>
+                                </v-col>
+                                <v-col class="col-auto font-weight-bold align-end text-h5">{{ leaveStart.format('yyyy年M月D日') }}
+                                </v-col>
+                            </v-row>
+                        </v-card-text>
+                    </v-card>
                     <v-expand-transition>
-                        <v-card v-if="months.length > 0 && valid" class="mt-4">
-                            <v-system-bar color="light-blue darken-4" dark>
-                                <v-spacer></v-spacer>
-                                <v-icon @click="onEscKeyDown">mdi-close</v-icon>
-                            </v-system-bar>
+                        <v-card v-if="months.length > 0 && valid" class="mt-4 mx-auto" max-width="750" cols="12" sm="6" md="4" lg="3">
                             <v-card-text>
                                 <v-row>
                                     <v-col>
-                                        出産手当金支給期間:
-                                        <v-chip color="white ml-2" light>{{ preStartDate.format('yyyy年M月D日') }}～{{ postEndDate.format('yyyy年M月D日') }}（{{ benefitDays }}日間）</v-chip>
                                         <v-btn target="gcal" :href="gcalUrl">
                                             <v-icon left>mdi-calendar</v-icon>Googleカレンダーに登録</v-btn>
                                     </v-col>
@@ -99,23 +164,7 @@
                                     </v-col>
                                 </v-row>
                                 <v-row>
-                                    <v-col v-show="message == 1">出産日が予定日より1 週間以上遅れた場合は、1週間を超える期間については無給となります。</v-col>
-                                    <v-col v-show="message == 2">妊娠４カ月未満で早産、流産や人工妊娠中絶を行ったときは、<span style='background-color:#FA8072;'>その当日</span>を産前休暇として取ることができます。また、その日から<span style='background-color:#00BFFF;'>６週間以内で医師が必要と認めた期間</span>を産後休暇として取ることができます。</v-col>
-                                    <v-col v-show="message == 3">
-                                        予定日の６週間前になるまでに出産したときは<span style='background-color:#FA8072;'>出産当日と出産日前で医師が休養を必要と認めた期間（最大６週間）</span>を産前休暇として取ることができます。
-                                    </v-col>
-                                </v-row>
-                                <v-row v-show="debug">
-                                    <v-col>expectedDate: {{ expectedDate }}</v-col>
-                                    <v-col>birthDate: {{ birthDate }}</v-col>
-                                    <v-col>preStartDate: {{ preStartDate.format("yyyy-MM-DD") }}</v-col>
-                                    <v-col>preEndDate: {{ preEndDate.format("yyyy-MM-DD") }}</v-col>
-                                    <v-col>postStartDate: {{ postStartDate.format("yyyy-MM-DD") }}</v-col>
-                                    <v-col>postEndDate: {{ postEndDate .format("yyyy-MM-DD") }}</v-col>
-                                    <v-col>benefitDays: {{ benefitDays }}</v-col>
-                                </v-row>
-                                <v-row>
-                                    <v-col v-for="m in months" :key="m.key" cols="12" sm="6" md="4" lg="3" xl="2">
+                                    <v-col v-for="m in months" :key="m.key" cols="12" sm="6" md="6" lg="6" xl="6">
                                         <v-card>
                                             <v-card-title>
                                                 <v-row>
@@ -165,6 +214,7 @@
                 postEndDate: null,
                 extended: 0,
                 benefitDays: 0,
+                extendedDays: 0,
                 leaveStart: null,
                 leaveEnd: null,
                 message: 0,
@@ -253,6 +303,7 @@
                         this.extended = 0;
                     }
                     this.benefitDays = this.postEndDate.diff(this.preStartDate, 'days') + 1;
+                    this.extendedDays = moment(this.birthDate).diff(moment(this.expectedDate), 'days');
                     this.leaveStart = this.postEndDate.clone()
                     this.leaveStart.add(1, 'days');
                     this.leaveEnd = this.leaveStart.clone();
@@ -282,21 +333,21 @@
                 getEvents() {
                     const events = [];
                     events.push({
-                        name: '開始',
+                        name: '開始日',
                         start: this.preStartDate.format('yyyy-MM-DD'),
                         end: null,
                         timed: false,
                         color: '#f00'
                     });
                     events.push({
-                        name: '満了',
+                        name: '満了日',
                         start: this.postEndDate.format('yyyy-MM-DD'),
                         end: null,
                         timed: false,
                         color: '#f00'
                     });
                     events.push({
-                        name: '予定',
+                        name: '予定日',
                         start: this.expectedDate,
                         end: null,
                         timed: false,
@@ -304,22 +355,13 @@
                     });
                     if (!this.onSchedule) {
                         events.push({
-                            name: '出生',
+                            name: '出生日',
                             start: this.birthDate,
                             end: null,
                             timed: false,
                             color: '#f90'
                         });
                     }
-                    const s = this.leaveStart.format('yyyy-MM-DD')
-                    const e = this.leaveEnd.format('yyyy-MM-DD')
-                    events.push({
-                        name: '育休',
-                        start: s,
-                        end: s,
-                        timed: false,
-                        color: '#000'
-                    })
                     return events;
                 },
                 getEventColor(event) {
